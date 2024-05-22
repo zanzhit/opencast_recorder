@@ -13,6 +13,7 @@ import (
 	"github.com/zanzhit/opencast_recorder/pkg/httpserver"
 	"github.com/zanzhit/opencast_recorder/pkg/repository"
 	"github.com/zanzhit/opencast_recorder/pkg/service"
+	"github.com/zanzhit/opencast_recorder/pkg/service/opencast"
 )
 
 func main() {
@@ -37,14 +38,15 @@ func main() {
 	}
 
 	repos := repository.NewRepository(db)
-	services := service.NewService(repos, service.Config{
-		ACL:          acl,
-		Processing:   processing,
-		VideosPath:   viper.GetString("videos_path"),
-		VideoService: viper.GetString("video_service"),
-		Login:        viper.GetString("login"),
-		Password:     viper.GetString("password"),
-	})
+	videoService := opencast.NewOpencastService(
+		acl,
+		processing,
+		viper.GetString("videos_path"),
+		viper.GetString("video_service"),
+		viper.GetString("login"),
+		viper.GetString("password"))
+
+	services := service.NewService(repos, videoService, viper.GetString("videos_path"))
 	handlers := handler.NewHandler(services)
 
 	srv := new(httpserver.Server)
