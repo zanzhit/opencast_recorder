@@ -1,13 +1,8 @@
 package service
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
-	"mime/multipart"
 	"net/http"
-	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -18,27 +13,27 @@ import (
 )
 
 type VideoService interface {
-	Move(recorder.Recording) ([]byte, error)
+	Move(recorder.Recording) (*http.Response, error)
 }
 
 type RecordingService struct {
-	repo     repository.Recording
-	cfg      Config
-	commands map[string]*exec.Cmd
+	repo       repository.Recording
+	video      VideoService
+	commands   map[string]*exec.Cmd
+	videosPath string
 }
 
-const fileExtension = 3
-
-func NewRecordingService(repo repository.Recording, cfg Config) *RecordingService {
+func NewRecordingService(repo repository.Recording, video VideoService, videosPath string) *RecordingService {
 	return &RecordingService{
-		repo:     repo,
-		cfg:      cfg,
-		commands: make(map[string]*exec.Cmd),
+		repo:       repo,
+		video:      video,
+		commands:   make(map[string]*exec.Cmd),
+		videosPath: videosPath,
 	}
 }
 
 func (s *RecordingService) Start(rec []recorder.Recording) error {
-	parametres, err := recordingMode(rec, s.cfg.VideosPath)
+	parametres, err := recordingMode(rec, s.videosPath)
 	if err != nil {
 		return err
 	}
@@ -76,145 +71,41 @@ func (s *RecordingService) Stop(cameraIP string) error {
 	return nil
 }
 
-//РЕАЛИЗОВАТЬ АБСТРАКЦИЮ НА СЛУЧАЙ ДРУГОГО СЕРВИСА ВИДЕО
-
-func (s *RecordingService) Move(cameraIP string) ([]byte, error) {
+func (s *RecordingService) Move(cameraIP string) (*http.Response, error) {
 	rec, err := s.repo.LastRecording(cameraIP)
 	if err != nil {
 		return nil, err
 	}
 
-	if rec.IsMoved {
-		return nil, &errs.BadRequst{Message: "recording has already been moved"}
-	}
-
-	videoFile, err := os.ReadFile(rec.FilePath)
+	response, err := s.video.Move(rec)
 	if err != nil {
 		return nil, err
 	}
 
-	md := Metadata{
-		Flavor: "dublincore/episode",
-		Fields: []Field{
-			{
-				ID:    "title",
-				Value: "title",
-			},
-			{
-				ID:    "startDate",
-				Value: rec.StartTime.Format(time.DateOnly),
-			},
-			{
-				ID:    "startTime",
-				Value: rec.StartTime.Format(time.TimeOnly),
-			},
-			{
-				ID:    "duration",
-				Value: "00:00:01",
-			},
-			{
-				ID:    "location",
-				Value: "title",
-			},
-		},
-	}
-
-	metadata, err := json.Marshal(md)
-	if err != nil {
-		return nil, err
-	}
-
-	data := map[string][]byte{
-		"presenter":  videoFile,
-		"metadata":   metadata,
-		"acl":        s.cfg.ACL,
-		"processing": s.cfg.Processing,
-	}
-
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	defer writer.Close()
-
-	for fieldName, fieldData := range data {
-		if fieldName == "presenter" {
-			part, err := writer.CreateFormFile(fieldName, fmt.Sprintf("%s.%s", fieldName, rec.FilePath[len(rec.FilePath)-fileExtension:]))
-			if err != nil {
-				return nil, err
-			}
-
-			_, err = io.Copy(part, bytes.NewReader(fieldData))
-			if err != nil {
-				return nil, err
-			}
-
-			continue
-		}
-
-		part, err := writer.CreateFormField(fieldName)
-		if err != nil {
-			return nil, err
-		}
-		part.Write(fieldData)
-	}
-
-	opencastVideos := fmt.Sprintf("%s/api/events", s.cfg.VideoService)
-	req, err := http.NewRequest("POST", opencastVideos, body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-	req.SetBasicAuth("test", "test")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	fmt.Println(respBody)
-	fmt.Println(resp.Status)
-
-	return respBody, nil
+	return response, nil
 }
 
 func (s *RecordingService) Schedule(rec recorder.RecordingSchedule) error {
-	errChan := make(chan error)
-	go func() {
-		delay := time.Until(rec.ScheduleStartTime)
-		if delay < 0 {
-			errChan <- &errs.BadRequst{Message: "wrong time"}
-			return
-		}
-
-		time.Sleep(delay)
-
-		err := s.Start(rec.Recordings)
-		if err != nil {
-			errChan <- err
-			return
-		}
-
-		time.Sleep(rec.Duration)
-
-		selectedRecord := rec.Recordings[len(rec.Recordings)-1].CameraIP
-		err = s.Stop(selectedRecord)
-		if err != nil {
-			errChan <- err
-		}
-	}()
-
-	select {
-	case err := <-errChan:
-		return err
-	case <-time.After(time.Until(rec.ScheduleStartTime.Add(rec.Duration))):
-		return nil
+	delay := time.Until(rec.ScheduleStartTime)
+	if delay < 0 {
+		return &errs.BadRequst{Message: "wrong time"}
 	}
+
+	time.Sleep(delay)
+
+	err := s.Start(rec.Recordings)
+	if err != nil {
+		return err
+	}
+
+	time.Sleep(rec.Duration)
+
+	selectedRecord := rec.Recordings[len(rec.Recordings)-1].CameraIP
+	if err = s.Stop(selectedRecord); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *RecordingService) Stats(cameraIP string) (recorder.Recording, error) {
@@ -228,8 +119,10 @@ func (s *RecordingService) Stats(cameraIP string) (recorder.Recording, error) {
 
 func recordingMode(rec []recorder.Recording, videosPath string) ([]string, error) {
 	selectedRecord := len(rec) - 1
+
 	fileName := strings.ReplaceAll(rec[selectedRecord].CameraIP, ":", "..")
 
+	rec[selectedRecord].StartTime = time.Now()
 	rec[selectedRecord].FilePath = fmt.Sprintf("%s/%s.mkv", videosPath, fileName)
 
 	var parametres string
@@ -244,8 +137,6 @@ func recordingMode(rec []recorder.Recording, videosPath string) ([]string, error
 
 		return nil, fmt.Errorf("too many arguments")
 	}
-
-	fmt.Println(parametres)
 
 	return strings.Split(parametres, " "), nil
 }

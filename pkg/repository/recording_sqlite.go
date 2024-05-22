@@ -19,7 +19,6 @@ func NewRecordingSQLite(db *sql.DB) *RecordingSQLite {
 }
 
 func (r *RecordingSQLite) Start(rec recorder.Recording) error {
-	rec.StartTime = time.Now()
 	rec.IsMoved = false
 
 	query := fmt.Sprintf(`INSERT INTO %s (camera_ip, start_time, file_path, is_moved) VALUES (?, ?, ?, ?)`, recordingsTable)
