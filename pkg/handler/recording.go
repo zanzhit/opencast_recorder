@@ -2,10 +2,12 @@ package handler
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	recorder "github.com/zanzhit/opencast_recorder"
 	"github.com/zanzhit/opencast_recorder/pkg/errs"
 )
@@ -31,7 +33,7 @@ func (h *Handler) start(c *gin.Context) {
 	c.Status(http.StatusCreated)
 }
 
-// Only the last ipi is taken for recording, several values separated by commas are taken in transit only for convenience of the user.
+// Only the last ip is taken for recording, several values separated by commas are taken in transit only for convenience of the user.
 func (h *Handler) stop(c *gin.Context) {
 	ips := strings.Split(c.Param("camera_ip"), ",")
 	selectedRecord := ips[len(ips)-1]
@@ -45,30 +47,50 @@ func (h *Handler) stop(c *gin.Context) {
 		}
 	}
 
-	c.Status(http.StatusOK)
+	response, err := h.services.Move(selectedRecord)
+	if err != nil {
+		switch err.(type) {
+		case *errs.ErrNoRecording:
+			newErrorResponse(c, http.StatusNotFound, err.Error())
+			return
+		default:
+			newErrorResponse(c, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+	defer response.Body.Close()
+
+	responseBody, err := io.ReadAll(response.Body)
+	if err != nil {
+		newErrorResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	c.JSON(response.StatusCode, responseBody)
 }
 
 func (h *Handler) move(c *gin.Context) {
 	ips := strings.Split(c.Param("camera_ip"), ",")
 	selectedRecord := ips[len(ips)-1]
 
-	respBody, err := h.services.Move(selectedRecord)
+	response, err := h.services.Move(selectedRecord)
 	if err != nil {
 		switch err.(type) {
-		case *errs.BadRequst:
-			newErrorResponse(c, http.StatusBadRequest, err.Error())
-			return
 		case *errs.ErrNoRecording:
 			newErrorResponse(c, http.StatusNotFound, err.Error())
 			return
 		default:
-			c.JSON(http.StatusInternalServerError, respBody)
-			// newErrorResponse(c, http.StatusInternalServerError, err.Error())
+			newErrorResponse(c, http.StatusInternalServerError, err.Error())
 			return
 		}
 	}
+	defer response.Body.Close()
 
-	c.JSON(http.StatusCreated, respBody)
+	responseBody, err := io.ReadAll(response.Body)
+	if err != nil {
+		newErrorResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	c.JSON(response.StatusCode, responseBody)
 }
 
 func (h *Handler) schedule(c *gin.Context) {
@@ -83,19 +105,17 @@ func (h *Handler) schedule(c *gin.Context) {
 		return
 	}
 
-	if err := h.services.Schedule(input); err != nil {
-		switch err.(type) {
-		case *errs.BadRequst:
-			newErrorResponse(c, http.StatusBadRequest, err.Error())
-			return
-		case *errs.ErrNoRecording:
-			newErrorResponse(c, http.StatusNotFound, err.Error())
-			return
-		default:
-			newErrorResponse(c, http.StatusInternalServerError, err.Error())
-			return
+	go func() {
+		if err := h.services.Schedule(input); err != nil {
+			logrus.Print("schedule error: ", err.Error())
 		}
-	}
+
+		selectedRecord := ips[len(ips)-1]
+		_, err := h.services.Move(selectedRecord)
+		if err != nil {
+			logrus.Print("moving error: ", err.Error())
+		}
+	}()
 
 	c.Status(http.StatusOK)
 }
