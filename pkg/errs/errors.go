@@ -13,15 +13,3 @@ type BadRequst struct {
 func (e *BadRequst) Error() string {
 	return e.Message
 }
-
-// type ErrRecordingAlreadyMoved struct{}
-
-// func (e *ErrRecordingAlreadyMoved) Error() string {
-// 	return "recording has already been moved"
-// }
-
-// type ErrTooManyArguments struct{}
-
-// func (e *ErrTooManyArguments) Error() string {
-// 	return "too many arguments"
-// }
