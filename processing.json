@@ -1,7 +1,0 @@
-{
-  "workflow": "ilias",
-  "configuration": {
-    "autopublish": "false",
-    "useExternalPlayer": "false"
-  }
-}
