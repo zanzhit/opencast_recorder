@@ -131,10 +131,9 @@ func recordingMode(rec []recorder.Recording, videosPath string) ([]string, error
 		parametres = fmt.Sprintf("gst-launch-1.0 rtspsrc location=%s ! rtph264depay ! h264parse ! matroskamux ! filesink location=%s",
 			rec[0].RTSP, rec[0].FilePath)
 	case 2:
-		parametres = fmt.Sprintf("gst-launch-1.0 -e videomixer name=mix sink_0::xpos=0 sink_1::xpos=640 ! videoconvert ! x264enc ! matroskamux ! filesink location=%s uridecodebin uri=%s ! videoconvert ! videoscale ! video/x-raw,width=640,height=480 ! mix.sink_0 uridecodebin uri=%s ! videoconvert ! videoscale ! video/x-raw,width=640,height=480 ! mix.sink_1 uridecodebin uri=%s ! audioconvert ! vorbisenc ! matroskamux ! filesink location=%s",
-			rec[1].FilePath, rec[0].RTSP, rec[1].RTSP, rec[0].RTSP, rec[1].FilePath)
+		parametres = fmt.Sprintf("gst-launch-1.0 -e videomixer name=mix sink_0::xpos=0 sink_1::xpos=640 ! videoconvert ! x264enc ! queue ! mux. uridecodebin uri=%s ! videoconvert ! videoscale ! video/x-raw,width=640,height=480 ! mix.sink_0 uridecodebin uri=%s ! videoconvert ! videoscale ! video/x-raw,width=640,height=480 ! mix.sink_1 uridecodebin uri=%s ! audioconvert ! vorbisenc ! queue ! mux. matroskamux name=mux ! filesink location=%s",
+			rec[0].RTSP, rec[1].RTSP, rec[0].RTSP, rec[1].FilePath)
 	default:
-
 		return nil, fmt.Errorf("too many arguments")
 	}
 
