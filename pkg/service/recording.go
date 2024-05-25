@@ -38,6 +38,13 @@ func (s *RecordingService) Start(rec []recorder.Recording) error {
 		return err
 	}
 
+	if _, ok := s.commands[rec[len(rec)-1].CameraIP]; ok {
+		err = s.Stop(rec[len(rec)-1].CameraIP)
+		if err != nil {
+			return err
+		}
+	}
+
 	cmd := exec.Command(parametres[0], parametres[1:]...)
 	if err := cmd.Start(); err != nil {
 		return err
