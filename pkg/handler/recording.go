@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -105,6 +107,11 @@ func (h *Handler) schedule(c *gin.Context) {
 		return
 	}
 
+	if err := scheduleDurationToInt(&input); err != nil {
+		newErrorResponse(c, http.StatusBadRequest, "invalid duration")
+		return
+	}
+
 	go func() {
 		if err := h.services.Schedule(input); err != nil {
 			logrus.Print("schedule error: ", err.Error())
@@ -132,4 +139,26 @@ func (h *Handler) stats(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, recording)
+}
+
+func scheduleDurationToInt(rec *recorder.RecordingSchedule) error {
+	parts := strings.Split(rec.DurationStr, ":")
+	hours, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return err
+	}
+
+	minutes, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return err
+	}
+
+	seconds, err := strconv.Atoi(parts[2])
+	if err != nil {
+		return err
+	}
+
+	rec.Duration = time.Duration(hours)*time.Hour + time.Duration(minutes)*time.Minute + time.Duration(seconds)*time.Second
+
+	return nil
 }

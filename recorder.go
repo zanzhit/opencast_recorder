@@ -12,8 +12,9 @@ type Recording struct {
 }
 
 type RecordingSchedule struct {
-	ScheduleStartTime time.Time     `json:"start_time"`
-	Duration          time.Duration `json:"duration"`
+	ScheduleStartTime time.Time `json:"start_time"`
+	DurationStr       string    `json:"duration"`
+	Duration          time.Duration
 	Recordings        []Recording
 }
 
