@@ -32,7 +32,6 @@ func (r *RecordingSQLite) Start(rec recorder.Recording) error {
 
 func (r *RecordingSQLite) Stop(cameraIP string) error {
 	stopTime := time.Now()
-	fmt.Println(cameraIP)
 
 	query := fmt.Sprintf(`UPDATE %s SET stop_time = ? WHERE record_id = (SELECT record_id FROM %s
 						  WHERE camera_ip = ? ORDER BY start_time DESC LIMIT 1)`, recordingsTable, recordingsTable)
