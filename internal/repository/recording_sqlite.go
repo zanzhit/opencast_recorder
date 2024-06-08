@@ -55,17 +55,18 @@ func (r *RecordingSQLite) Move(cameraIP string) error {
 	return nil
 }
 
-func (r *RecordingSQLite) LastRecording(rec *models.Recording) error {
+func (r *RecordingSQLite) LastRecording(cameraIP string) (models.Recording, error) {
 	query := fmt.Sprintf(`SELECT camera_ip, start_time, stop_time, file_path, is_moved FROM %s WHERE record_id = (SELECT record_id FROM %s
 						  WHERE camera_ip = ? ORDER BY start_time DESC LIMIT 1)`, recordingsTable, recordingsTable)
 
-	err := r.db.QueryRow(query, rec.CameraIP).Scan(&rec.CameraIP, &rec.StartTime, &rec.StopTime, &rec.FilePath, &rec.IsMoved)
+	var rec models.Recording
+	err := r.db.QueryRow(query, cameraIP).Scan(&rec.CameraIP, &rec.StartTime, &rec.StopTime, &rec.FilePath, &rec.IsMoved)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return &errs.ErrNoRecording{}
+			return rec, &errs.ErrNoRecording{}
 		}
-		return fmt.Errorf("error retrieving recording: %w", err)
+		return rec, fmt.Errorf("error retrieving recording: %w", err)
 	}
 
-	return nil
+	return rec, nil
 }

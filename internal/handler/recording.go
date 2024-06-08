@@ -92,6 +92,22 @@ func (h *Handler) move(c *gin.Context) {
 		newErrorResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
+	if response.StatusCode == http.StatusOK || response.StatusCode == http.StatusCreated {
+		rec, err := h.services.Stats(selectedRecord)
+		if err != nil {
+			switch err.(type) {
+			case *errs.ErrNoRecording:
+				newErrorResponse(c, http.StatusNotFound, err.Error())
+			default:
+				newErrorResponse(c, http.StatusInternalServerError, err.Error())
+			}
+		}
+		if err := h.services.DeleteLocal(rec.FilePath); err != nil {
+			newErrorResponse(c, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
 	c.JSON(response.StatusCode, responseBody)
 }
 
