@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	recorder "github.com/zanzhit/opencast_recorder"
+	"github.com/zanzhit/opencast_recorder/internal/domain/models"
 )
 
 type OpencastService struct {
@@ -35,7 +35,7 @@ func NewOpencastService(acl, processing []byte, videosPath, url, login, password
 	}
 }
 
-func (o *OpencastService) Move(rec recorder.Recording) (*http.Response, error) {
+func (o *OpencastService) Move(rec models.Recording) (*http.Response, error) {
 	videoFile, err := os.ReadFile(rec.FilePath)
 	if err != nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (o *OpencastService) Move(rec recorder.Recording) (*http.Response, error) {
 	return resp, nil
 }
 
-func (o *OpencastService) createForm(data map[string][]byte, body *bytes.Buffer, rec recorder.Recording) (string, error) {
+func (o *OpencastService) createForm(data map[string][]byte, body *bytes.Buffer, rec models.Recording) (string, error) {
 	writer := multipart.NewWriter(body)
 	defer writer.Close()
 

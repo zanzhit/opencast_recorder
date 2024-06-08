@@ -1,4 +1,4 @@
-package opencastrecorder
+package models
 
 import "time"
 
@@ -16,10 +16,4 @@ type RecordingSchedule struct {
 	DurationStr       string    `json:"duration"`
 	Duration          time.Duration
 	Recordings        []Recording
-}
-
-type Camera struct {
-	CameraIP   string `json:"camera_ip"`
-	RoomNumber string `json:"room_number"`
-	HasAudio   bool   `json:"has_audio"`
 }

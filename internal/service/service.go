@@ -3,20 +3,21 @@ package service
 import (
 	"net/http"
 
-	recorder "github.com/zanzhit/opencast_recorder"
-	"github.com/zanzhit/opencast_recorder/pkg/repository"
+	"github.com/zanzhit/opencast_recorder/internal/domain/models"
+	"github.com/zanzhit/opencast_recorder/internal/repository"
 )
 
 type Camera interface {
-	Create(camera recorder.Camera) error
+	Create(camera models.Camera) error
 }
 
 type Recording interface {
-	Start(rec []recorder.Recording) error
+	Start(rec []models.Recording) error
 	Stop(cameraIP string) error
 	Move(string) (*http.Response, error)
-	Schedule(rec recorder.RecordingSchedule) error
-	Stats(string) (recorder.Recording, error)
+	DeleteLocal(string) error
+	Schedule(rec models.RecordingSchedule) error
+	Stats(string) (models.Recording, error)
 }
 
 type Service struct {

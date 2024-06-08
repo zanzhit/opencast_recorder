@@ -3,18 +3,18 @@ package repository
 import (
 	"database/sql"
 
-	recorder "github.com/zanzhit/opencast_recorder"
+	"github.com/zanzhit/opencast_recorder/internal/domain/models"
 )
 
 type Camera interface {
-	Create(camera recorder.Camera) error
+	Create(camera models.Camera) error
 }
 
 type Recording interface {
-	Start(rec recorder.Recording) error
+	Start(rec models.Recording) error
 	Stop(cameraIP string) error
 	Move(cameraIP string) error
-	LastRecording(cameraIP string) (recorder.Recording, error)
+	LastRecording(cameraIP string) (models.Recording, error)
 }
 
 type Repository struct {

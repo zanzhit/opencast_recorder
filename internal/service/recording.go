@@ -3,17 +3,18 @@ package service
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
 
-	recorder "github.com/zanzhit/opencast_recorder"
-	"github.com/zanzhit/opencast_recorder/pkg/errs"
-	"github.com/zanzhit/opencast_recorder/pkg/repository"
+	"github.com/zanzhit/opencast_recorder/internal/domain/models"
+	"github.com/zanzhit/opencast_recorder/internal/errs"
+	"github.com/zanzhit/opencast_recorder/internal/repository"
 )
 
 type VideoService interface {
-	Move(recorder.Recording) (*http.Response, error)
+	Move(models.Recording) (*http.Response, error)
 }
 
 type RecordingService struct {
@@ -32,7 +33,7 @@ func NewRecordingService(repo repository.Recording, video VideoService, videosPa
 	}
 }
 
-func (s *RecordingService) Start(rec []recorder.Recording) error {
+func (s *RecordingService) Start(rec []models.Recording) error {
 	parametres, err := recordingMode(rec, s.videosPath)
 	if err != nil {
 		return err
@@ -89,10 +90,22 @@ func (s *RecordingService) Move(cameraIP string) (*http.Response, error) {
 		return nil, err
 	}
 
+	if err := os.Remove(rec.FilePath); err != nil {
+		return nil, err
+	}
+
 	return response, nil
 }
 
-func (s *RecordingService) Schedule(rec recorder.RecordingSchedule) error {
+func (s *RecordingService) DeleteLocal(filePath string) error {
+	if err := os.Remove(filePath); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *RecordingService) Schedule(rec models.RecordingSchedule) error {
 	delay := time.Until(rec.ScheduleStartTime)
 	if delay < 0 {
 		return &errs.BadRequst{Message: "wrong time"}
@@ -115,7 +128,7 @@ func (s *RecordingService) Schedule(rec recorder.RecordingSchedule) error {
 	return nil
 }
 
-func (s *RecordingService) Stats(cameraIP string) (recorder.Recording, error) {
+func (s *RecordingService) Stats(cameraIP string) (models.Recording, error) {
 	rec, err := s.repo.LastRecording(cameraIP)
 	if err != nil {
 		return rec, err
@@ -124,13 +137,13 @@ func (s *RecordingService) Stats(cameraIP string) (recorder.Recording, error) {
 	return rec, nil
 }
 
-func recordingMode(rec []recorder.Recording, videosPath string) ([]string, error) {
+func recordingMode(rec []models.Recording, videosPath string) ([]string, error) {
 	selectedRecord := len(rec) - 1
 
 	fileName := strings.ReplaceAll(rec[selectedRecord].CameraIP, ":", "..")
 
 	rec[selectedRecord].StartTime = time.Now()
-	rec[selectedRecord].FilePath = fmt.Sprintf("%s/%s.mkv", videosPath, fileName)
+	rec[selectedRecord].FilePath = fmt.Sprintf("%s/%s_%s.mkv", videosPath, fileName, rec[selectedRecord].StartTime.Format("2006-01-02_15-04-05"))
 
 	var parametres string
 	switch len(rec) {

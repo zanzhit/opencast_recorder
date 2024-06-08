@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	_ "github.com/mattn/go-sqlite3"
-	recorder "github.com/zanzhit/opencast_recorder"
+	"github.com/zanzhit/opencast_recorder/internal/domain/models"
 )
 
 type CameraSQLite struct {
@@ -16,7 +16,7 @@ func NewCameraSQLite(db *sql.DB) *CameraSQLite {
 	return &CameraSQLite{db: db}
 }
 
-func (r *CameraSQLite) Create(camera recorder.Camera) error {
+func (r *CameraSQLite) Create(camera models.Camera) error {
 	query := fmt.Sprintf("INSERT INTO %s (camera_ip, room_number, has_audio) VALUES (?, ?, ?)", camerasTable)
 	_, err := r.db.Exec(query, camera.CameraIP, camera.RoomNumber, camera.HasAudio)
 	if err != nil {

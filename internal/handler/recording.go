@@ -10,14 +10,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
-	recorder "github.com/zanzhit/opencast_recorder"
-	"github.com/zanzhit/opencast_recorder/pkg/errs"
+	"github.com/zanzhit/opencast_recorder/internal/domain/models"
+	"github.com/zanzhit/opencast_recorder/internal/errs"
 )
 
 func (h *Handler) start(c *gin.Context) {
 	ips := strings.Split(c.Param("camera_ip"), ",")
 
-	cameras := make([]recorder.Recording, len(ips))
+	cameras := make([]models.Recording, len(ips))
 	for i := 0; i < len(ips); i++ {
 		cameras[i].CameraIP = ips[i]
 		cameras[i].RTSP = fmt.Sprintf("rtsp://%s", ips[i])
@@ -96,10 +96,10 @@ func (h *Handler) move(c *gin.Context) {
 }
 
 func (h *Handler) schedule(c *gin.Context) {
-	var input recorder.RecordingSchedule
+	var input models.RecordingSchedule
 	ips := strings.Split(c.Param("camera_ip"), ",")
 	for i := 0; i < len(ips); i++ {
-		input.Recordings = append(input.Recordings, recorder.Recording{CameraIP: ips[i], RTSP: fmt.Sprintf("rtsp://%s", ips[i])})
+		input.Recordings = append(input.Recordings, models.Recording{CameraIP: ips[i], RTSP: fmt.Sprintf("rtsp://%s", ips[i])})
 	}
 
 	if err := c.BindJSON(&input); err != nil {
@@ -141,7 +141,7 @@ func (h *Handler) stats(c *gin.Context) {
 	c.JSON(http.StatusOK, recording)
 }
 
-func scheduleDurationToInt(rec *recorder.RecordingSchedule) error {
+func scheduleDurationToInt(rec *models.RecordingSchedule) error {
 	parts := strings.Split(rec.DurationStr, ":")
 	hours, err := strconv.Atoi(parts[0])
 	if err != nil {

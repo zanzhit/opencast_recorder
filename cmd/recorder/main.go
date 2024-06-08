@@ -9,11 +9,11 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"github.com/zanzhit/opencast_recorder/pkg/handler"
-	"github.com/zanzhit/opencast_recorder/pkg/httpserver"
-	"github.com/zanzhit/opencast_recorder/pkg/repository"
-	"github.com/zanzhit/opencast_recorder/pkg/service"
-	"github.com/zanzhit/opencast_recorder/pkg/service/opencast"
+	"github.com/zanzhit/opencast_recorder/internal/handler"
+	"github.com/zanzhit/opencast_recorder/internal/httpserver"
+	"github.com/zanzhit/opencast_recorder/internal/repository"
+	"github.com/zanzhit/opencast_recorder/internal/service"
+	"github.com/zanzhit/opencast_recorder/internal/service/opencast"
 )
 
 func main() {

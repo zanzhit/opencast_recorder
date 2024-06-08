@@ -6,8 +6,8 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
-	recorder "github.com/zanzhit/opencast_recorder"
-	"github.com/zanzhit/opencast_recorder/pkg/errs"
+	"github.com/zanzhit/opencast_recorder/internal/domain/models"
+	"github.com/zanzhit/opencast_recorder/internal/errs"
 )
 
 type RecordingSQLite struct {
@@ -18,7 +18,7 @@ func NewRecordingSQLite(db *sql.DB) *RecordingSQLite {
 	return &RecordingSQLite{db: db}
 }
 
-func (r *RecordingSQLite) Start(rec recorder.Recording) error {
+func (r *RecordingSQLite) Start(rec models.Recording) error {
 	rec.IsMoved = false
 
 	query := fmt.Sprintf(`INSERT INTO %s (camera_ip, start_time, file_path, is_moved) VALUES (?, ?, ?, ?)`, recordingsTable)
@@ -55,18 +55,17 @@ func (r *RecordingSQLite) Move(cameraIP string) error {
 	return nil
 }
 
-func (r *RecordingSQLite) LastRecording(cameraIP string) (recorder.Recording, error) {
+func (r *RecordingSQLite) LastRecording(rec *models.Recording) error {
 	query := fmt.Sprintf(`SELECT camera_ip, start_time, stop_time, file_path, is_moved FROM %s WHERE record_id = (SELECT record_id FROM %s
 						  WHERE camera_ip = ? ORDER BY start_time DESC LIMIT 1)`, recordingsTable, recordingsTable)
 
-	var rec recorder.Recording
-	err := r.db.QueryRow(query, cameraIP).Scan(&rec.CameraIP, &rec.StartTime, &rec.StopTime, &rec.FilePath, &rec.IsMoved)
+	err := r.db.QueryRow(query, rec.CameraIP).Scan(&rec.CameraIP, &rec.StartTime, &rec.StopTime, &rec.FilePath, &rec.IsMoved)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return rec, &errs.ErrNoRecording{}
+			return &errs.ErrNoRecording{}
 		}
-		return rec, fmt.Errorf("error retrieving recording: %w", err)
+		return fmt.Errorf("error retrieving recording: %w", err)
 	}
 
-	return rec, nil
+	return nil
 }

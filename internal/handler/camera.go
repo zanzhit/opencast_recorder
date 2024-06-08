@@ -4,11 +4,11 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	recorder "github.com/zanzhit/opencast_recorder"
+	"github.com/zanzhit/opencast_recorder/internal/domain/models"
 )
 
 func (h *Handler) create(c *gin.Context) {
-	var input recorder.Camera
+	var input models.Camera
 	if err := c.BindJSON(&input); err != nil {
 		newErrorResponse(c, http.StatusBadRequest, "invalid input body")
 		return

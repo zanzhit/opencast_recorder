@@ -2,7 +2,7 @@ package handler
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/zanzhit/opencast_recorder/pkg/service"
+	"github.com/zanzhit/opencast_recorder/internal/service"
 )
 
 type Handler struct {
