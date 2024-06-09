@@ -46,8 +46,10 @@ func (h *Handler) stop(c *gin.Context) {
 		switch err.(type) {
 		case *errs.ErrNoRecording:
 			newErrorResponse(c, http.StatusNotFound, err.Error())
+			return
 		default:
 			newErrorResponse(c, http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
 
@@ -67,6 +69,7 @@ func (h *Handler) stop(c *gin.Context) {
 	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
 		newErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
 	}
 
 	c.JSON(response.StatusCode, responseBody)
@@ -92,6 +95,7 @@ func (h *Handler) move(c *gin.Context) {
 	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
 		newErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
 	}
 
 	if response.StatusCode == http.StatusOK || response.StatusCode == http.StatusCreated {
@@ -151,8 +155,10 @@ func (h *Handler) stats(c *gin.Context) {
 		switch err.(type) {
 		case *errs.ErrNoRecording:
 			newErrorResponse(c, http.StatusNotFound, err.Error())
+			return
 		default:
 			newErrorResponse(c, http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
 
