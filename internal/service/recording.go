@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -34,6 +35,10 @@ func NewRecordingService(repo repository.Recording, video VideoService, videosPa
 }
 
 func (s *RecordingService) Start(rec []models.Recording) error {
+	if available := isCameraAvailable(rec[len(rec)-1].CameraIP); !available {
+		return &errs.BadRequst{Message: "camera is not available"}
+	}
+
 	parametres, err := recordingMode(rec, s.videosPath)
 	if err != nil {
 		return err
@@ -158,4 +163,14 @@ func recordingMode(rec []models.Recording, videosPath string) ([]string, error) 
 	}
 
 	return strings.Split(parametres, " "), nil
+}
+
+func isCameraAvailable(cameraIP string) bool {
+	conn, err := net.DialTimeout("tcp", cameraIP, 3*time.Second)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err.Error())
+		return false
+	}
+	conn.Close()
+	return true
 }
