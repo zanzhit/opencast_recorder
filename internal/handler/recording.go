@@ -27,8 +27,10 @@ func (h *Handler) start(c *gin.Context) {
 		switch err.(type) {
 		case *errs.BadRequst:
 			newErrorResponse(c, http.StatusBadRequest, err.Error())
+			return
 		default:
 			newErrorResponse(c, http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
 
